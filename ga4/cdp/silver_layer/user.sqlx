@@ -1,0 +1,40 @@
+config {
+  type: "table",
+  database: "dataset_id",
+  schema: "prod_ga4_silver_view",
+  name: "user_data_test",
+  tags: ["silver", "ga4", "test"],
+
+  bigquery: {
+    partitionBy: "event_date",
+    clusterBy: ["stream_id", "user_pseudo_id", "event_name"],
+    requirePartitionFilter: true
+  }
+}
+
+SELECT
+  PARSE_DATE('%Y%m%d', event_date) AS event_date,
+  TIMESTAMP_MICROS(event_timestamp) AS event_timestamp,
+  event_name,
+  user_pseudo_id,
+  user_id,
+  stream_id,
+  platform,
+  device.category AS device_category,
+
+  traffic_source.source AS first_user_source,
+  traffic_source.medium AS first_user_medium,
+  traffic_source.name AS first_user_campaign,
+
+  event_params,
+  user_properties,
+  privacy_info,
+
+  CURRENT_TIMESTAMP() AS loaded_at
+
+FROM `projectid.dataset_id.events_*`
+
+WHERE
+  REGEXP_CONTAINS(_TABLE_SUFFIX, r'^\d{8}$')
+  AND PARSE_DATE('%Y%m%d', _TABLE_SUFFIX)
+      >= DATE_SUB(CURRENT_DATE("Asia/Kolkata"), INTERVAL 1 DAY)
